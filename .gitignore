@@ -1,3 +1,6 @@
+# installation directory for coreograph build 
+/openssl-install
+
 # Ignore editor artefacts
 /.dir-locals.el
 

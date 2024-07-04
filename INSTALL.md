@@ -2,8 +2,8 @@ Build and Install
 =================
 
 This document describes installation on all supported operating
-systems (the Unix/Linux family, including macOS), OpenVMS,
-and Windows).
+systems: the Unix/Linux family (including macOS), OpenVMS,
+and Windows.
 
 Table of Contents
 =================
@@ -19,7 +19,7 @@ Table of Contents
    - [Build Type](#build-type)
    - [Directories](#directories)
    - [Compiler Warnings](#compiler-warnings)
-   - [ZLib Flags](#zlib-flags)
+   - [Compression Algorithm Flags](#compression-algorithm-flags)
    - [Seeding the Random Generator](#seeding-the-random-generator)
    - [Setting the FIPS HMAC key](#setting-the-FIPS-HMAC-key)
    - [Enable and Disable Features](#enable-and-disable-features)
@@ -64,6 +64,7 @@ issues and other details, please read one of these:
  * [Notes for Windows platforms](NOTES-WINDOWS.md)
  * [Notes for the DOS platform with DJGPP](NOTES-DJGPP.md)
  * [Notes for the OpenVMS platform](NOTES-VMS.md)
+ * [Notes for the HPE NonStop platform](NOTES-NONSTOP.md)
  * [Notes on Perl](NOTES-PERL.md)
  * [Notes on Valgrind](NOTES-VALGRIND.md)
 
@@ -120,21 +121,11 @@ represents one of the four commands
 Arguments
 ---------
 
-**Mandatory arguments** are enclosed in double curly braces.
-A simple example would be
+**Optional Arguments** are enclosed in square brackets.
 
-    $ type {{ filename }}
+    [option...]
 
-which is to be understood to use the command `type` on some file name
-determined by the user.
-
-**Optional Arguments** are enclosed in double square brackets.
-
-    [[ options ]]
-
-Note that the notation assumes spaces around `{`, `}`, `[`, `]`, `{{`, `}}` and
-`[[`, `]]`.  This is to differentiate from OpenVMS directory
-specifications, which also use [ and ], but without spaces.
+A trailing ellipsis means that more than one could be specified.
 
 Quick Installation Guide
 ========================
@@ -151,7 +142,7 @@ Use the following commands to configure, build and test OpenSSL.
 The testing is optional, but recommended if you intend to install
 OpenSSL for production use.
 
-### Unix / Linux / macOS
+### Unix / Linux / macOS / NonStop
 
     $ ./Configure
     $ make
@@ -177,8 +168,9 @@ issue the following commands to build OpenSSL.
 As mentioned in the [Choices](#choices) section, you need to pick one
 of the four Configure targets in the first command.
 
-Most likely you will be using the `VC-WIN64A` target for 64bit Windows
-binaries (AMD64) or `VC-WIN32` for 32bit Windows binaries (X86).
+Most likely you will be using the `VC-WIN64A`/`VC-WIN64A-HYBRIDCRT` target for
+64bit Windows binaries (AMD64) or `VC-WIN32`/`VC-WIN32-HYBRIDCRT` for 32bit
+Windows binaries (X86).
 The other two options are `VC-WIN64I` (Intel IA64, Itanium) and
 `VC-CE` (Windows CE) are rather uncommon nowadays.
 
@@ -207,7 +199,7 @@ the global search path for system libraries.
 Finally, if you plan on using the FIPS module, you need to read the
 [Post-installation Notes](#post-installation-notes) further down.
 
-### Unix / Linux / macOS
+### Unix / Linux / macOS / NonStop
 
 Depending on your distribution, you need to run the following command as
 root user or prepend `sudo` to the command:
@@ -244,9 +236,8 @@ and issue the following command.
 
     $ nmake install
 
-The easiest way to elevate the Command Prompt is to press and hold down
-the both the `<CTRL>` and `<SHIFT>` key while clicking the menu item in the
-task menu.
+The easiest way to elevate the Command Prompt is to press and hold down both
+the `<CTRL>` and `<SHIFT>` keys while clicking the menu item in the task menu.
 
 The default installation location is
 
@@ -392,8 +383,39 @@ for OpenSSL development.  It only works when using gcc or clang as the compiler.
 If you are developing a patch for OpenSSL then it is recommended that you use
 this option where possible.
 
-ZLib Flags
-----------
+Compression Algorithm Flags
+---------------------------
+
+### with-brotli-include
+
+    --with-brotli-include=DIR
+
+The directory for the location of the brotli include files (i.e. the location
+of the **brotli** include directory).  This option is only necessary if
+[enable-brotli](#enable-brotli) is used and the include files are not already
+on the system include path.
+
+### with-brotli-lib
+
+    --with-brotli-lib=LIB
+
+**On Unix**: this is the directory containing the brotli libraries.
+If not provided, the system library path will be used.
+
+The names of the libraries are:
+
+* libbrotlicommon.a or libbrotlicommon.so
+* libbrotlidec.a or libbrotlidec.so
+* libbrotlienc.a or libbrotlienc.so
+
+**On Windows:** this is the directory containing the brotli libraries.
+If not provided, the system library path will be used.
+
+The names of the libraries are:
+
+* brotlicommon.lib
+* brotlidec.lib
+* brotlienc.lib
 
 ### with-zlib-include
 
@@ -418,6 +440,32 @@ then this flag is optional and defaults to `ZLIB1` if not provided.
 **On VMS:** this is the filename of the zlib library (with or without a path).
 This flag is optional and if not provided then `GNV$LIBZSHR`, `GNV$LIBZSHR32`
 or `GNV$LIBZSHR64` is used by default depending on the pointer size chosen.
+
+### with-zstd-include
+
+    --with-zstd-include=DIR
+
+The directory for the location of the Zstd include file. This option is only
+necessary if [enable-std](#enable-zstd) is used and the include file is not
+already on the system include path.
+
+OpenSSL requires Zstd 1.4 or greater. The Linux kernel source contains a
+*zstd.h* file that is not compatible with the 1.4.x Zstd distribution, the
+compilation will generate an error if the Linux *zstd.h* is included before
+(or instead of) the Zstd distribution header.
+
+### with-zstd-lib
+
+    --with-zstd-lib=LIB
+
+**On Unix**: this is the directory containing the Zstd library.
+If not provided the system library path will be used.
+
+**On Windows:** this is the filename of the Zstd library (with or
+without a path).  This flag must be provided if the
+[enable-zstd-dynamic](#enable-zstd-dynamic) option is not also used.
+If `zstd-dynamic` is used then this flag is optional and defaults
+to `LIBZSTD` if not provided.
 
 Seeding the Random Generator
 ----------------------------
@@ -456,7 +504,8 @@ This source is ignored by the FIPS provider.
 
 ### rdcpu
 
-Use the `RDSEED` or `RDRAND` command if provided by the CPU.
+Use the `RDSEED` or `RDRAND` command on x86 or `RNDRRS` command on aarch64
+if provided by the CPU.
 
 ### librandom
 
@@ -481,7 +530,7 @@ Setting the FIPS HMAC key
 
 As part of its self-test validation, the FIPS module must verify itself
 by performing a SHA-256 HMAC computation on itself. The default key is
-the SHA256 value of "the holy handgrenade of antioch" and is sufficient
+the SHA256 value of "holy hand grenade of antioch" and is sufficient
 for meeting the FIPS requirements.
 
 To change the key to a different value, use this flag. The value should
@@ -535,6 +584,11 @@ access to algorithm internals that are not normally accessible.
 Additional information related to ACVP can be found at
 <https://github.com/usnistgov/ACVP>.
 
+### no-apps
+
+Do not build apps, e.g. the openssl program. This is handy for minimization.
+This option also disables tests.
+
 ### no-asm
 
 Do not use assembler code.
@@ -546,6 +600,14 @@ be used even with this option.
 ### no-async
 
 Do not build support for async operations.
+
+### no-atexit
+
+Do not use `atexit()` in libcrypto builds.
+
+`atexit()` has varied semantics between platforms and can cause SIGSEGV in some
+circumstances. This option disables the atexit registration of OPENSSL_cleanup.
+By default, NonStop configurations use `no-atexit`.
 
 ### no-autoalginit
 
@@ -564,6 +626,17 @@ Don't automatically load all libcrypto/libssl error strings.
 Typically OpenSSL will automatically load human readable error strings.  For a
 statically linked application this may be undesirable if small executable size
 is an objective.
+
+### enable-brotli
+
+Build with support for brotli compression/decompression.
+
+### enable-brotli-dynamic
+
+Like the enable-brotli option, but has OpenSSL load the brotli library dynamically
+when needed.
+
+This is only supported on systems where loading of shared libraries is supported.
 
 ### no-autoload-config
 
@@ -651,6 +724,10 @@ given with `--api` (or the current version, if `--api` wasn't specified).
 Don't build support for datagram based BIOs.
 
 Selecting this option will also force the disabling of DTLS.
+
+### no-docs
+
+Don't build and install documentation, i.e. manual pages in various forms.
 
 ### no-dso
 
@@ -747,6 +824,10 @@ Note that if this feature is enabled then GOST ciphersuites are only available
 if the GOST algorithms are also available through loading an externally supplied
 engine.
 
+### no-http
+
+Disable HTTP support.
+
 ### no-legacy
 
 Don't build the legacy provider.
@@ -797,14 +878,22 @@ By default OpenSSL will attempt to stay in memory until the process exits.
 This is so that libcrypto and libssl can be properly cleaned up automatically
 via an `atexit()` handler.  The handler is registered by libcrypto and cleans
 up both libraries.  On some platforms the `atexit()` handler will run on unload of
-libcrypto (if it has been dynamically loaded) rather than at process exit.  This
-option can be used to stop OpenSSL from attempting to stay in memory until the
+libcrypto (if it has been dynamically loaded) rather than at process exit.
+
+This option can be used to stop OpenSSL from attempting to stay in memory until the
 process exits.  This could lead to crashes if either libcrypto or libssl have
 already been unloaded at the point that the atexit handler is invoked, e.g.  on a
 platform which calls `atexit()` on unload of the library, and libssl is unloaded
-before libcrypto then a crash is likely to happen.  Applications can suppress
-running of the `atexit()` handler at run time by using the
-`OPENSSL_INIT_NO_ATEXIT` option to `OPENSSL_init_crypto()`.
+before libcrypto then a crash is likely to happen.
+
+Note that shared library pinning is not automatically disabled for static builds,
+i.e., `no-shared` does not imply `no-pinshared`. This may come as a surprise when
+linking libcrypto statically into a shared third-party library, because in this
+case the shared library will be pinned. To prevent this behaviour, you need to
+configure the static build using `no-shared` and `no-pinshared` together.
+
+Applications can suppress running of the `atexit()` handler at run time by
+using the `OPENSSL_INIT_NO_ATEXIT` option to `OPENSSL_init_crypto()`.
 See the man page for it for further details.
 
 ### no-posix-io
@@ -833,6 +922,10 @@ Build support for Stream Control Transmission Protocol (SCTP).
 Do not create shared libraries, only static ones.
 
 See [Notes on shared libraries](#notes-on-shared-libraries) below.
+
+### no-sm2-precomp
+
+Disable using the SM2 precomputed table on aarch64 to make the library smaller.
 
 ### no-sock
 
@@ -887,6 +980,14 @@ tests also use the command line applications, the tests will also be skipped.
 
 Don't build test programs or run any tests.
 
+### enable-tfo
+
+Build with support for TCP Fast Open (RFC7413). Supported on Linux, macOS and FreeBSD.
+
+### no-quic
+
+Don't build with QUIC support.
+
 ### no-threads
 
 Don't build with support for multi-threaded applications.
@@ -898,6 +999,27 @@ this by default.  However, if on a platform where this is not the case then this
 will usually require additional system-dependent options!
 
 See [Notes on multi-threading](#notes-on-multi-threading) below.
+
+### no-thread-pool
+
+Don't build with support for thread pool functionality.
+
+### thread-pool
+
+Build with thread pool functionality. If enabled, OpenSSL algorithms may
+use the thread pool to perform parallel computation. This option in itself
+does not enable OpenSSL to spawn new threads. Currently the only supported
+thread pool mechanism is the default thread pool.
+
+### no-default-thread-pool
+
+Don't build with support for default thread pool functionality.
+
+### default-thread-pool
+
+Build with default thread pool functionality. If enabled, OpenSSL may create
+and manage threads up to a maximum number of threads authorized by the
+application. Supported on POSIX compliant platforms and Windows.
 
 ### enable-trace
 
@@ -950,6 +1072,25 @@ Like the zlib option, but has OpenSSL load the zlib library dynamically
 when needed.
 
 This is only supported on systems where loading of shared libraries is supported.
+
+### enable-zstd
+
+Build with support for Zstd compression/decompression.
+
+### enable-zstd-dynamic
+
+Like the enable-zstd option, but has OpenSSL load the Zstd library dynamically
+when needed.
+
+This is only supported on systems where loading of shared libraries is supported.
+
+### enable-unstable-qlog
+
+Enables qlog output support for the QUIC protocol. This functionality is
+unstable and implements a draft version of the qlog specification. The qlog
+output from OpenSSL will change in incompatible ways in future, and is not
+subject to any format stability or compatibility guarantees at this time. See
+the manpage openssl-qlog(7) for details.
 
 ### 386
 
@@ -1020,7 +1161,7 @@ below and how these flags interact with those variables.
 
 Additional options that are not otherwise recognised are passed through as
 they are to the compiler as well.  Unix-style options beginning with a
-`-` or `+` and Windows-style options beginning with a `/` are recognized.
+`-` or `+` and Windows-style options beginning with a `/` are recognised.
 Again, consult your compiler documentation.
 
 If the option contains arguments separated by spaces, then the URL-style
@@ -1155,15 +1296,15 @@ the same.
 
 #### Unix / Linux / macOS
 
-    $ ./Configure [[ options ]]
+    $ ./Configure [options...]
 
 #### OpenVMS
 
-    $ perl Configure [[ options ]]
+    $ perl Configure [options...]
 
 #### Windows
 
-    $ perl Configure [[ options ]]
+    $ perl Configure [options...]
 
 ### Manual Configuration
 
@@ -1185,12 +1326,13 @@ When you have identified your system (and if necessary compiler) use this
 name as the argument to `Configure`.  For example, a `linux-elf` user would
 run:
 
-    $ ./Configure linux-elf [[ options ]]
+    $ ./Configure linux-elf [options...]
 
 ### Creating your own Configuration
 
 If your system isn't listed, you will have to create a configuration
-file named `Configurations/{{ something }}.conf` and add the correct
+file named `Configurations/YOURFILENAME.conf` (replace `YOURFILENAME`
+with a filename of your choosing) and add the correct
 configuration for your system.  See the available configs as examples
 and read [Configurations/README.md](Configurations/README.md) and
 [Configurations/README-design.md](Configurations/README-design.md)
@@ -1204,6 +1346,14 @@ and `descrip.mms` on OpenVMS) from a suitable template in `Configurations/`,
 and defines various macros in `include/openssl/configuration.h` (generated
 from `include/openssl/configuration.h.in`.
 
+If none of the generated build files suit your purpose, it's possible to
+write your own build file template and give its name through the environment
+variable `BUILDFILE`.  For example, Ninja build files could be supported by
+writing `Configurations/build.ninja.tmpl` and then configure with `BUILDFILE`
+set like this (Unix syntax shown, you'll have to adapt for other platforms):
+
+    $ BUILDFILE=build.ninja perl Configure [options...]
+
 ### Out of Tree Builds
 
 OpenSSL can be configured to build in a build directory separate from the
@@ -1214,21 +1364,21 @@ directory and invoking the configuration commands from there.
 
     $ mkdir /var/tmp/openssl-build
     $ cd /var/tmp/openssl-build
-    $ /PATH/TO/OPENSSL/SOURCE/Configure [[ options ]]
+    $ /PATH/TO/OPENSSL/SOURCE/Configure [options...]
 
 #### OpenVMS example
 
     $ set default sys$login:
     $ create/dir [.tmp.openssl-build]
     $ set default [.tmp.openssl-build]
-    $ perl D:[PATH.TO.OPENSSL.SOURCE]Configure [[ options ]]
+    $ perl D:[PATH.TO.OPENSSL.SOURCE]Configure [options...]
 
 #### Windows example
 
     $ C:
     $ mkdir \temp-openssl
     $ cd \temp-openssl
-    $ perl d:\PATH\TO\OPENSSL\SOURCE\Configure [[ options ]]
+    $ perl d:\PATH\TO\OPENSSL\SOURCE\Configure [options...]
 
 Paths can be relative just as well as absolute.  `Configure` will do its best
 to translate them to relative paths whenever possible.
@@ -1449,7 +1599,7 @@ over the build process.  Typically these should be defined prior to running
 
     PERL
                    The name of the Perl executable to use when building OpenSSL.
-                   Only needed if builing should use a different Perl executable
+                   Only needed if building should use a different Perl executable
                    than what is used to run the Configure script.
 
     RANLIB
@@ -1605,7 +1755,7 @@ working incorrectly. If you think you encountered a bug, please
 Along with a short description of the bug, please provide the complete
 configure command line and the relevant output including the error message.
 
-Note: To make the output readable, pleace add a 'code fence' (three backquotes
+Note: To make the output readable, please add a 'code fence' (three backquotes
 ` ``` ` on a separate line) before and after your output:
 
      ```
